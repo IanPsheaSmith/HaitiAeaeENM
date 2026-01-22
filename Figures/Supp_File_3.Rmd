@@ -4105,6 +4105,181 @@ if __name__ == "__main__":
 
 ```
 
+```{r Interactive-map}
+
+#  1) Set a SINGLE shared palette + SINGLE shared domain for EVERYTHING (0–1)
+
+  # Create common palette (Suitability + SD + CV all share this)
+    common_pal <- colorNumeric(
+      palette = viridis::plasma(256),
+      domain = c(0, 1),
+      na.color = "transparent"
+    )
+
+#  2) Initialize map
+
+  # Initialize map
+    map <- leaflet() %>%
+      addProviderTiles("OpenStreetMap", group = "OSM") %>%
+      addProviderTiles("Esri.WorldImagery", group = "Satellite") %>%
+      addProviderTiles("OpenTopoMap", group = "Topographic") %>%
+      setView(lng = -72.3, lat = 19.0, zoom = 8)
+
+  # Track all layer groups
+    layer_groups <- c()
+
+
+#  3) Baseline (Mean/Median + individual BRTs)
+
+  # Baseline mean/median
+    map <- map %>%
+      addRasterImage(Aeae_ensemble_mean,   colors = common_pal, opacity = 0.8, group = "Baseline - Mean") %>%
+      addRasterImage(Aeae_ensemble_median, colors = common_pal, opacity = 0.8, group = "Baseline - Median")
+
+    layer_groups <- c(layer_groups, "Baseline - Mean", "Baseline - Median")
+
+  # Baseline BRT models
+    n_brts <- length(Aeae_individual_predictions)
+    for (j in 1:n_brts) {
+      group_name <- paste0("Baseline - Model ", j)
+      map <- map %>%
+        addRasterImage(Aeae_individual_predictions[[j]],
+                       colors = common_pal, opacity = 0.8, group = group_name)
+      layer_groups <- c(layer_groups, group_name)
+    }
+
+#  4) Baseline uncertainty (SD + CV) using the SAME palette + SAME 0–1 scale
+
+  # Baseline uncertainty
+    map <- map %>%
+      addRasterImage(Aeae_ensemble_sd, colors = common_pal, opacity = 0.8, group = "Baseline - Std Dev") %>%
+      addRasterImage(Aeae_ensemble_cv, colors = common_pal, opacity = 0.8, group = "Baseline - Coeff Var")
+
+    layer_groups <- c(layer_groups, "Baseline - Std Dev", "Baseline - Coeff Var")
+
+
+#  5) Warming level predictions (Mean/Median + individual BRTs + uncertainty)
+
+  # Swap with an apply based function instead later...
+    for (i in seq_along(wl_predictions_100)) {
+
+      wl <- wl_predictions_100[[i]]$warming_level
+      wl_display <- paste0(wl, "°C")
+
+      cat("Adding", wl, "°C layers\n")
+
+      # Mean and Median
+      map <- map %>%
+        addRasterImage(wl_predictions_100[[i]]$mean,
+                       colors = common_pal, opacity = 0.8, group = paste0(wl_display, " - Mean")) %>%
+        addRasterImage(wl_predictions_100[[i]]$median,
+                       colors = common_pal, opacity = 0.8, group = paste0(wl_display, " - Median"))
+
+      layer_groups <- c(layer_groups,
+                        paste0(wl_display, " - Mean"),
+                        paste0(wl_display, " - Median"))
+
+      # BRT models
+      for (j in 1:n_brts) {
+        group_name <- paste0(wl_display, " - Model ", j)
+        map <- map %>%
+          addRasterImage(wl_predictions_100[[i]]$individual_predictions[[j]],
+                         colors = common_pal, opacity = 0.8, group = group_name)
+        layer_groups <- c(layer_groups, group_name)
+      }
+
+      # Uncertainty (same palette + same 0–1 scale)
+      map <- map %>%
+        addRasterImage(wl_predictions_100[[i]]$sd,
+                       colors = common_pal, opacity = 0.8, group = paste0(wl_display, " - Std Dev")) %>%
+        addRasterImage(wl_predictions_100[[i]]$cv,
+                       colors = common_pal, opacity = 0.8, group = paste0(wl_display, " - Coeff Var"))
+
+      layer_groups <- c(layer_groups,
+                        paste0(wl_display, " - Std Dev"),
+                        paste0(wl_display, " - Coeff Var"))
+    }
+
+#  6) Layer control (base + overlays)
+
+  # Use native layer control
+    map <- map %>%
+      addLayersControl(
+        baseGroups = c("OSM", "Satellite", "Topographic"),
+        overlayGroups = layer_groups,
+        options = layersControlOptions(collapsed = FALSE)
+      ) %>%
+      hideGroup(layer_groups[-1])  # Hide all except first (Baseline - Mean)
+
+#  7) ONE legend for EVERYTHING (and attempt to reverse its visual order)
+    map <- map %>%
+      addLegend(
+        pal = common_pal,
+        values = c(0, 1),
+        title = "Legend",
+        position = "bottomleft",
+        opacity = 1,
+        layerId = "legend_common"
+      )
+
+  # Attempt to reverse legend so HIGH appears at the TOP and LOW at the BOTTOM
+     map <- htmlwidgets::onRender(map, "
+      function(el, x) {
+
+        // Find the legend container by id (layerId becomes an element id)
+        var legend = document.querySelector('#legend_common');
+        if (!legend) return;
+
+        // Leaflet builds legend lines as: <i ...></i> label <br>
+        // We'll split on <br>, reverse non-empty lines, and re-join.
+        var html = legend.innerHTML;
+
+        // Split lines (keeping only meaningful ones)
+        var parts = html.split('<br>');
+        var cleaned = parts.map(function(s){ return s.trim(); })
+                           .filter(function(s){ return s.length > 0; });
+
+        // If it looks like a normal legend, reverse it
+        // (keep the title chunk at the top if present)
+        // Leaflet puts title as <div class=\"legend-title\">... sometimes; sometimes just <h4>.
+        // We'll try to keep the first line as title if it doesn't include '<i'.
+        if (cleaned.length < 2) return;
+
+        var firstIsTitle = (cleaned[0].indexOf('<i') === -1);
+
+        var titleLine = null;
+        var legendLines = cleaned;
+
+        if (firstIsTitle) {
+          titleLine = cleaned[0];
+          legendLines = cleaned.slice(1);
+        }
+
+        legendLines.reverse();
+
+        var rebuilt = [];
+        if (titleLine) rebuilt.push(titleLine);
+        rebuilt = rebuilt.concat(legendLines);
+
+        legend.innerHTML = rebuilt.join('<br>') + '<br>';
+      }
+    ")
+
+
+# ───────────────────────────────────────────────────────────────────────────────
+#  8) Save and display
+# ───────────────────────────────────────────────────────────────────────────────
+
+  # Save and display
+    assign("comprehensive_interactive_map", map, envir = .GlobalEnv)
+
+  comprehensive_interactive_map
+
+
+```
+
+### Thresholds
+
 ```{r baseline_thresholds}
 
   # Export directory
@@ -6710,7 +6885,7 @@ commune_stats_all
   
   htmlwidgets::saveWidget(
       commune_map,
-      file = file.path(out_dir, "haiti_communes_JIAF_suitability.html"),
+      file = file.path(out_dir, "Haiti_Communes_Map.html"),
       selfcontained = TRUE
   )
   
@@ -8146,4 +8321,453 @@ commune_stats_all
   assign("dept_summary_table_jiaf",    dept_table_out,    envir = .GlobalEnv)
   assign("commune_summary_table_jiaf", commune_table_out, envir = .GlobalEnv)
 
+```
+
+## Final Comprehensive Risk HTML
+
+```{r Export-Leaflet-Risk-Map-HTML}
+
+# Export Leaflet Risk Map with Risk Index Percentile Layers (Commune Level)
+
+  # Define output directory for HTML exports
+    out_dir <- "C:/Users/ianpsheasmith/OneDrive - University of Florida/Documents - Haiti Vector/General/Figures/Haiti_SDMs/Figures/HTML_Finals"
+      
+    if (!dir.exists(out_dir)) {
+      dir.create(out_dir, recursive = TRUE)
+    }
+
+  # Helper function to extract first layer from RasterBrick objects
+    pick_raster <- function(x) {
+      if (inherits(x, "RasterBrick")) x[[1]] else x
+    }
+
+  # Extract individual raster layers from ensemble predictions
+    baseline_raster <- pick_raster(Aeae_ensemble_mean)
+    wl15_raster     <- pick_raster(Aeae_WL1_5_suitability_mean)
+    wl2_raster      <- pick_raster(Aeae_WL2_suitability_mean)
+    wl3_raster      <- pick_raster(Aeae_WL3_suitability_mean)
+    wl4_raster      <- pick_raster(Aeae_WL4_suitability_mean)
+
+  # Stack rasters for efficient zonal extraction
+    raster_stack <- raster::stack(
+      baseline_raster,
+      wl15_raster,
+      wl2_raster,
+      wl3_raster,
+      wl4_raster
+    )
+    names(raster_stack) <- c("baseline", "wl15", "wl2", "wl3", "wl4")
+
+  # Aggregate ADM3 boundaries to ADM2 (commune) level
+    Haiti_adm2_boundaries <- Haiti_adm3 |>
+      group_by(ADM2_EN, ADM2_PCODE, ADM1_EN, ADM1_PCODE) |>
+      summarise(.groups = "drop")
+
+  # Extract zonal statistics for suitability across all warming scenarios
+    zonal_stats_adm2 <- exactextractr::exact_extract(
+      raster_stack,
+      Haiti_adm2_boundaries,
+      fun = function(values, coverage_fraction) {
+        suitability_means <- apply(
+          values[, 1:5, drop = FALSE],
+          2,
+          \(x) weighted.mean(x, coverage_fraction, na.rm = TRUE)
+        )
+        
+        data.frame(
+          mean_baseline_suitability = suitability_means[1],
+          mean_suitability_1_5C     = suitability_means[2],
+          mean_suitability_2C       = suitability_means[3],
+          mean_suitability_3C       = suitability_means[4],
+          mean_suitability_4C       = suitability_means[5]
+        )
+      }
+    )
+
+  # Join suitability metrics with JIAF deprivation indices
+    Haiti_adm2_map_data <- Haiti_adm2_boundaries |>
+      bind_cols(zonal_stats_adm2) |>
+      left_join(
+        jiaf_deprivation_primary,
+        by = c("ADM2_PCODE" = "admin2_pc")
+      ) |>
+      mutate(
+        suitability_change_1_5C = mean_suitability_1_5C - mean_baseline_suitability,
+        suitability_change_2C   = mean_suitability_2C   - mean_baseline_suitability,
+        suitability_change_3C   = mean_suitability_3C   - mean_baseline_suitability,
+        suitability_change_4C   = mean_suitability_4C   - mean_baseline_suitability
+      )
+
+  # Prepare commune-level suitability data for risk calculation
+    commune_suit_for_risk <- Haiti_adm2_map_data |>
+      sf::st_drop_geometry() |>
+      dplyr::select(
+        ADM2_PCODE, ADM2_EN, ADM1_EN, population,
+        mean_baseline_suitability,
+        mean_suitability_1_5C,
+        mean_suitability_2C,
+        mean_suitability_3C,
+        mean_suitability_4C
+      ) |>
+      tidyr::pivot_longer(
+        cols = starts_with("mean_"),
+        names_to = "scenario",
+        values_to = "mean_suitability"
+      ) |>
+      dplyr::mutate(
+        warming_level = dplyr::case_when(
+          scenario == "mean_baseline_suitability" ~ 0,
+          scenario == "mean_suitability_1_5C"     ~ 1.5,
+          scenario == "mean_suitability_2C"       ~ 2,
+          scenario == "mean_suitability_3C"       ~ 3,
+          scenario == "mean_suitability_4C"       ~ 4
+        )
+      ) |>
+      dplyr::select(-scenario) |>
+      dplyr::filter(!is.na(population), population > 0)
+
+  # Prepare vulnerability data (two indices only)
+    vulnerability_data <- Haiti_adm2_map_data |>
+      sf::st_drop_geometry() |>
+      dplyr::select(
+        ADM2_PCODE, ADM2_EN, ADM1_EN, population,
+        vuln_arith = index_comp_wt_norm,
+        vuln_max   = index_max_wt_norm
+      ) |>
+      dplyr::filter(!is.na(population), population > 0)
+
+  # Calculate risk indices
+    calculate_risk_indices <- function(commune_data, vulnerability_data) {
+      merged_data <- commune_data |>
+        dplyr::left_join(
+          vulnerability_data |> dplyr::select(ADM2_PCODE, vuln_arith, vuln_max),
+          by = "ADM2_PCODE"
+        ) |>
+        dplyr::filter(
+          !is.na(mean_suitability),
+          !is.na(population),
+          !is.na(vuln_arith)
+        )
+      
+      risk_data <- merged_data |>
+        dplyr::group_by(warming_level) |>
+        dplyr::mutate(
+          # Within-scenario normalization
+            hazard_norm = (mean_suitability - min(mean_suitability, na.rm = TRUE)) /
+              (max(mean_suitability, na.rm = TRUE) - min(mean_suitability, na.rm = TRUE)),
+            exposure_norm = (population - min(population, na.rm = TRUE)) /
+              (max(population, na.rm = TRUE) - min(population, na.rm = TRUE)),
+          
+          # Risk calculations (two indices only)
+            risk_arith = hazard_norm * exposure_norm * vuln_arith,
+            risk_max   = hazard_norm * exposure_norm * vuln_max,
+          
+          # Percentile ranks (0-100 scale)
+            risk_arith_percentile = dplyr::percent_rank(risk_arith) * 100,
+            risk_max_percentile   = dplyr::percent_rank(risk_max) * 100
+        ) |>
+        dplyr::ungroup()
+      
+      risk_data
+    }
+
+  # Calculate risk indices for all warming levels
+    risk_index_data <- calculate_risk_indices(commune_suit_for_risk, vulnerability_data)
+
+  # Pivot risk data back to wide format for joining
+    risk_wide <- risk_index_data |>
+      dplyr::select(ADM2_PCODE, warming_level, risk_arith, risk_max,
+                    risk_arith_percentile, risk_max_percentile) |>
+      tidyr::pivot_wider(
+        id_cols = ADM2_PCODE,
+        names_from = warming_level,
+        values_from = c(risk_arith, risk_max, risk_arith_percentile, risk_max_percentile),
+        names_glue = "{.value}_{warming_level}"
+      )
+
+  # Join risk indices to spatial data
+    Haiti_adm2_map_data <- Haiti_adm2_map_data |>
+      left_join(risk_wide, by = "ADM2_PCODE") |>
+      mutate(
+        across(starts_with("mean_"), \(x) round(x, 3)),
+        across(starts_with("suitability_change"), \(x) round(x, 3)),
+        across(starts_with("index_"), \(x) round(x, 3)),
+        across(starts_with("risk_arith_") & !contains("percentile"), \(x) round(x, 4)),
+        across(starts_with("risk_max_") & !contains("percentile"), \(x) round(x, 4)),
+        across(contains("percentile"), \(x) round(x, 1))
+      )
+
+  # Create popup HTML with all metrics (suitability, vulnerability, and risk)
+    Haiti_adm2_map_data <- Haiti_adm2_map_data |>
+      mutate(
+        popup_html = paste0(
+          "<div style='font-family: Arial; font-size: 12px; max-width: 420px;'>",
+          "<div style='font-size: 14px; font-weight: 700; margin-bottom: 4px;'>", ADM2_EN, "</div>",
+          "<div style='color:#444; margin-bottom: 6px;'>", ADM1_EN, " • ", ADM2_PCODE, "</div>",
+          
+          # Suitability section
+            "<hr style='margin: 6px 0; border-color: #ddd;'>",
+            "<b style='color: #B8860B;'><i>Aedes aegypti</i> Suitability</b><br>",
+            "<table style='width:100%; font-size:11px; margin-top:4px;'>",
+            "<tr><td>Baseline:</td><td style='text-align:right;'>", mean_baseline_suitability, "</td></tr>",
+            "<tr><td>+1.5°C:</td><td style='text-align:right;'>", mean_suitability_1_5C,
+              " <span style='color:", ifelse(suitability_change_1_5C >= 0, "green", "red"), ";'>(",
+              ifelse(suitability_change_1_5C >= 0, "+", ""), suitability_change_1_5C, ")</span></td></tr>",
+            "<tr><td>+2°C:</td><td style='text-align:right;'>", mean_suitability_2C,
+              " <span style='color:", ifelse(suitability_change_2C >= 0, "green", "red"), ";'>(",
+              ifelse(suitability_change_2C >= 0, "+", ""), suitability_change_2C, ")</span></td></tr>",
+            "<tr><td>+3°C:</td><td style='text-align:right;'>", mean_suitability_3C,
+              " <span style='color:", ifelse(suitability_change_3C >= 0, "green", "red"), ";'>(",
+              ifelse(suitability_change_3C >= 0, "+", ""), suitability_change_3C, ")</span></td></tr>",
+            "<tr><td>+4°C:</td><td style='text-align:right;'>", mean_suitability_4C,
+              " <span style='color:", ifelse(suitability_change_4C >= 0, "green", "red"), ";'>(",
+              ifelse(suitability_change_4C >= 0, "+", ""), suitability_change_4C, ")</span></td></tr>",
+            "</table>",
+          
+          # Vulnerability section
+            "<hr style='margin: 6px 0; border-color: #ddd;'>",
+            "<b style='color: #D84315;'>JIAF Vulnerability Indices</b><br>",
+            "<table style='width:100%; font-size:11px; margin-top:4px;'>",
+            "<tr><td>Compensatory:</td><td style='text-align:right;'><b>",
+              ifelse(is.na(index_comp_wt_norm), "No data", index_comp_wt_norm), "</b></td></tr>",
+            "<tr><td>Maximum:</td><td style='text-align:right;'>",
+              ifelse(is.na(index_max_wt_norm), "No data", index_max_wt_norm), "</td></tr>",
+            "</table>",
+          
+          # Risk index section - Compensatory
+            "<hr style='margin: 6px 0; border-color: #ddd;'>",
+            "<b style='color: #6A1B9A;'>Risk Index (Compensatory)</b><br>",
+            "<table style='width:100%; font-size:11px; margin-top:4px;'>",
+            "<tr><td>Baseline:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_arith_0`), "No data", `risk_arith_0`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_arith_percentile_0`), "-", `risk_arith_percentile_0`), "%ile)</span></td></tr>",
+            "<tr><td>+1.5°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_arith_1.5`), "No data", `risk_arith_1.5`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_arith_percentile_1.5`), "-", `risk_arith_percentile_1.5`), "%ile)</span></td></tr>",
+            "<tr><td>+2°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_arith_2`), "No data", `risk_arith_2`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_arith_percentile_2`), "-", `risk_arith_percentile_2`), "%ile)</span></td></tr>",
+            "<tr><td>+3°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_arith_3`), "No data", `risk_arith_3`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_arith_percentile_3`), "-", `risk_arith_percentile_3`), "%ile)</span></td></tr>",
+            "<tr><td>+4°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_arith_4`), "No data", `risk_arith_4`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_arith_percentile_4`), "-", `risk_arith_percentile_4`), "%ile)</span></td></tr>",
+            "</table>",
+          
+          # Risk index section - Maximum
+            "<hr style='margin: 6px 0; border-color: #ddd;'>",
+            "<b style='color: #4A148C;'>Risk Index (Maximum)</b><br>",
+            "<table style='width:100%; font-size:11px; margin-top:4px;'>",
+            "<tr><td>Baseline:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_max_0`), "No data", `risk_max_0`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_max_percentile_0`), "-", `risk_max_percentile_0`), "%ile)</span></td></tr>",
+            "<tr><td>+1.5°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_max_1.5`), "No data", `risk_max_1.5`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_max_percentile_1.5`), "-", `risk_max_percentile_1.5`), "%ile)</span></td></tr>",
+            "<tr><td>+2°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_max_2`), "No data", `risk_max_2`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_max_percentile_2`), "-", `risk_max_percentile_2`), "%ile)</span></td></tr>",
+            "<tr><td>+3°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_max_3`), "No data", `risk_max_3`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_max_percentile_3`), "-", `risk_max_percentile_3`), "%ile)</span></td></tr>",
+            "<tr><td>+4°C:</td><td style='text-align:right;'>",
+              ifelse(is.na(`risk_max_4`), "No data", `risk_max_4`),
+              " <span style='color:#888;'>(", ifelse(is.na(`risk_max_percentile_4`), "-", `risk_max_percentile_4`), "%ile)</span></td></tr>",
+            "</table>",
+          
+          # Population footer
+            "<hr style='margin: 6px 0; border-color: #ddd;'>",
+            "<span style='color:#666;'>Population: ",
+              ifelse(is.na(population), "No data", scales::comma(population)),
+            " | Sector coverage: ",
+              ifelse(is.na(sector_coverage_pct), "No data", paste0(sector_coverage_pct, "%")),
+            "</span>",
+          "</div>"
+        )
+      )
+
+  # Define color palette for risk percentiles (0-100 scale) using magma
+    risk_percentile_pal <- leaflet::colorNumeric(
+      palette  = viridisLite::magma(256),
+      domain   = c(0, 100),
+      na.color = "grey85"
+    )
+
+  # Custom legend control function for percentiles (high values at top)
+    legend_control_percentile <- function(id, title) {
+      brks <- seq(0, 100, by = 20)
+      cols <- risk_percentile_pal(brks)
+      
+      # Reverse order so high values appear at top
+        brks_rev <- rev(brks)
+        cols_rev <- rev(cols)
+      
+      tags$div(
+        id = id,
+        class = "map-legend",
+        style = paste0(
+          "background: rgba(255,255,255,0.92); padding: 10px 12px; border-radius: 8px; ",
+          "box-shadow: 0 1px 6px rgba(0,0,0,0.25); font-size: 12px; line-height: 1.15;"
+        ),
+        tags$div(style = "font-weight:700; margin-bottom:6px;", title),
+        tags$div(
+          lapply(seq_along(brks_rev), function(i) {
+            tags$div(
+              style = "display:flex; align-items:center; margin:2px 0;",
+              tags$div(
+                style = paste0(
+                  "width:14px;height:14px;border-radius:3px;margin-right:8px;background:",
+                  cols_rev[i], ";"
+                )
+              ),
+              tags$div(paste0(brks_rev[i], "%"))
+            )
+          })
+        )
+      )
+    }
+
+  # Build the commune risk map (percentile-based, risk layers only)
+    Haiti_Risk_Map <- leaflet(
+        Haiti_adm2_map_data,
+        options = leafletOptions(preferCanvas = TRUE)
+      ) |>
+      
+      # Base tiles
+        addProviderTiles("CartoDB.Positron", group = "Light") |>
+        addProviderTiles("OpenStreetMap", group = "OpenStreetMap") |>
+        addProviderTiles("Esri.WorldImagery", group = "Satellite") |>
+        setView(lng = -72.3, lat = 19.0, zoom = 8) |>
+      
+      # Risk layers - Compensatory (percentiles)
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_arith_percentile_0`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Comp): Baseline",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_arith_percentile_0`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_arith_percentile_1.5`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Comp): +1.5°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_arith_percentile_1.5`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_arith_percentile_2`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Comp): +2°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_arith_percentile_2`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_arith_percentile_3`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Comp): +3°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_arith_percentile_3`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_arith_percentile_4`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Comp): +4°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_arith_percentile_4`, 0), "th %ile")
+        ) |>
+      
+      # Risk layers - Maximum (percentiles)
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_max_percentile_0`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Max): Baseline",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_max_percentile_0`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_max_percentile_1.5`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Max): +1.5°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_max_percentile_1.5`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_max_percentile_2`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Max): +2°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_max_percentile_2`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_max_percentile_3`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Max): +3°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_max_percentile_3`, 0), "th %ile")
+        ) |>
+        addPolygons(
+          fillColor   = ~risk_percentile_pal(`risk_max_percentile_4`),
+          fillOpacity = 0.75, color = "white", weight = 1, opacity = 1,
+          group = "Risk (Max): +4°C",
+          highlightOptions = highlightOptions(weight = 2, color = "#333", fillOpacity = 0.9, bringToFront = TRUE),
+          popup = ~popup_html,
+          label = ~paste0(ADM2_EN, " • ", round(`risk_max_percentile_4`, 0), "th %ile")
+        ) |>
+      
+      # Layer controls
+        addLayersControl(
+          baseGroups = c("Light", "OpenStreetMap", "Satellite"),
+          overlayGroups = c(
+            # Risk Compensatory group
+              "Risk (Comp): Baseline",
+              "Risk (Comp): +1.5°C",
+              "Risk (Comp): +2°C",
+              "Risk (Comp): +3°C",
+              "Risk (Comp): +4°C",
+            # Risk Maximum group
+              "Risk (Max): Baseline",
+              "Risk (Max): +1.5°C",
+              "Risk (Max): +2°C",
+              "Risk (Max): +3°C",
+              "Risk (Max): +4°C"
+          ),
+          options = layersControlOptions(collapsed = FALSE),
+          position = "topleft"
+        ) |>
+      
+      # Show only compensatory baseline by default
+        hideGroup(c(
+          "Risk (Comp): +1.5°C", "Risk (Comp): +2°C", "Risk (Comp): +3°C", "Risk (Comp): +4°C",
+          "Risk (Max): Baseline", "Risk (Max): +1.5°C", "Risk (Max): +2°C", "Risk (Max): +3°C", "Risk (Max): +4°C"
+        )) |>
+      
+      # Add legend (high values at top)
+        addControl(
+          html = legend_control_percentile("legend_risk", "Risk Percentile"),
+          position = "bottomright"
+        )
+
+  # Save the map
+    htmlwidgets::saveWidget(
+      Haiti_Risk_Map,
+      file = file.path(out_dir, "Haiti_Risk_Map.html"),
+      selfcontained = TRUE
+    )
+
+  # Export to global environment
+    assign("Haiti_Risk_Map", Haiti_Risk_Map, envir = .GlobalEnv)
+    assign("Haiti_adm2_risk_data", Haiti_adm2_map_data, envir = .GlobalEnv)
+
+  # Display the map
+    Haiti_Risk_Map
 ```
