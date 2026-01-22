@@ -116,7 +116,7 @@ This analysis focuses on ecological niche modeling for *Aedes aegypti* mosquitoe
     }
   
   # GitHub base URL for raw files
-    github_base <- "https://raw.githubusercontent.com/IanPsheaSmith/HaitiAeaeENM/main/HaitiShapefiles/"
+    github_base <- "https://raw.githubusercontent.com/IanPsheaSmith/HaitiAeaeENM/main/Data/HaitiShapefiles/"
   
   # Download trap site data
     if (!file.exists("data/HaitiTrapsBin.csv")) {
@@ -3139,7 +3139,7 @@ if __name__ == "__main__":
   # Load warming levels data from your GitHub repository
     warming_levels_url <- paste0(
         "https://raw.githubusercontent.com/IanPsheaSmith/",
-        "HaitiAeaeENM/main/WarmingLevelsList/",
+        "HaitiAeaeENM/main/Data/WarmingLevelsList/",
         "cmip6_warming_levels_Hauser2022.csv"
     )
 
@@ -4803,7 +4803,7 @@ commune_stats_all
 ```{r Load-and-process-JIAF-data}
   
   # CHUNK 1: Load libraries and define path
-    path <- "https://raw.githubusercontent.com/IanPsheaSmith/HaitiAeaeENM/main/JIAF_Data/jiaf_haiti_2025.xlsx"
+    path <- "https://raw.githubusercontent.com/IanPsheaSmith/HaitiAeaeENM/main/Data/JIAF_Data/jiaf_haiti_2025.xlsx"
   
   # Download to temp file and reassign path
     temp_file <- tempfile(fileext = ".xlsx")
@@ -5710,7 +5710,7 @@ commune_stats_all
 # CHUNK A: Load and prepare spatial data (ADM2 / commune level)
 
   # Download ADM3 shapefile components
-    github_base <- "https://raw.githubusercontent.com/IanPsheaSmith/HaitiAeaeENM/main/HaitiShapefiles"
+    github_base <- "https://raw.githubusercontent.com/IanPsheaSmith/HaitiAeaeENM/main/Data/HaitiShapefiles"
     shp_name    <- "hti_admbnda_adm3_cnigs_20181129"
     shp_ext     <- c(".shp", ".shx", ".dbf", ".prj")
     
