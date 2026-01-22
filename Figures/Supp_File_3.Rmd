@@ -8330,7 +8330,7 @@ commune_stats_all
 # Export Leaflet Risk Map with Risk Index Percentile Layers (Commune Level)
 
   # Define output directory for HTML exports
-    out_dir <- "C:/Users/ianpsheasmith/OneDrive - University of Florida/Documents - Haiti Vector/General/Figures/Haiti_SDMs/Figures/HTML_Finals"
+    out_dir <- "swap this with your directory, you can't use mine, obviously :)"
       
     if (!dir.exists(out_dir)) {
       dir.create(out_dir, recursive = TRUE)

@@ -1,63 +1,168 @@
 # HaitiAeaeENM
 
-This repository contains data and code associated with a species distribution modeling study of _Aedes aegypti_ in Haiti. The study aims to predict the current and future distribution of _Ae. aegypti_ across Haiti under various climate warming scenarios and to assess population risk associated with mosquito habitat suitability.
+This repository contains data, code, figures, and interactive visualizations associated with a species distribution modelling study of *Aedes aegypti* in Haiti. The study predicts current and future habitat suitability under multiple climate warming scenarios and integrates these predictions with population and vulnerability metrics to assess spatial patterns of potential public health risk.
 
-## Repository Contents
+An interactive project website is hosted via GitHub Pages and serves as the primary entry point for exploring results and maps:
 
-### Datasets
+➡️ **https://ianpsheasmith.github.io/HaitiAeaeENM/**
 
-- **HaitiTrapsBin.csv**  
-  Contains coordinates and presence locations for _Aedes aegypti_ across Haiti, used as occurrence data for the ecological niche models.
+---
 
-- **HaitiShapefiles folder**  
-  Contains spatial data files for mapping and analysis:
-  - `HaitiPolygon.shp`: Base shapefile for Haiti
-  - `Haiti_no_Wtrwy.shp`: Haiti shapefile with bodies of water removed
-  - `hti_admbnda_adm3_cnigs_20181129.shp`: Haiti's 1st-3rd level administrative divisions, enabling visualization of administrative districts (communes and communal sections)
+## Overview
 
-- **WarmingLevelsList folder**  
-  Contains a CSV file from Hauser et al. (2022) with warming level assignments for Global Climate Models (GCMs). The file includes columns for:
-  - Model name
-  - Shared Socioeconomic Pathway (SSP)
-  - Warming level (1.5°C, 2°C, 3°C, and 4°C)
-  - Approximate dates
-  
-  These data are used to assign appropriate climate projections for future habitat suitability predictions.
+*Aedes aegypti* is the primary vector of dengue, Zika, chikungunya, and yellow fever viruses, pathogens of ongoing public health importance worldwide, and either currently or historically in Haiti. This project applies distribution modelling to quantify how climatic suitability for *Ae. aegypti* is expected to change under global warming, and to examine how these changes intersect with population exposure and measures of humanitarian deprivation.
 
-### Analysis Code
+Key components of the analysis include:
+- ensemble boosted regression tree (BRT) models
+- current (baseline) and future climate projections using warming levels (+1.5°C to +4°C)
+- population exposure estimates
+- integration with humanitarian deprivation metrics to produce composite risk indices
 
-- **HaitiENM.qmd**  
-  Quarto markdown file containing all code for:
-  - Boosted regression tree (BRT) modeling
-  - Current habitat suitability predictions
-  - Future habitat suitability under climate warming scenarios
-  - Population at risk analyses
-  - Map generation and visualization
+---
 
-## Usage Instructions
+## Repository Structure
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/IanPsheaSmith/HaitiAeaeENM.git
-   ```
-2. Open the `HaitiENM.qmd` file in RStudio or another Quarto-compatible IDE.
-3. Install any required R packages (listed at the top of the `.qmd` file).
-4. Render the document to reproduce analyses, outputs, and figures.
+```text
+HaitiAeaeENM/
+├── index.html
+├── README.md
+├── Data/
+│   ├── Covars/
+│   ├── Ensemble_Rasters/
+│   ├── HaitiShapefiles/
+│   ├── JIAF_Data/
+│   ├── PseudoAbsence_Datasets/
+│   └── WarmingLevelsList/
+├── Figures/
+├── Haiti_Aeae_Preds.html
+├── Haiti_Aeae_Preds_files/
+├── Haiti_Communes_Map.html
+├── Haiti_Communes_Map_files/
+├── Haiti_Risk_Map.html
+└── Haiti_Risk_Map_files/
+````
+
+The `*_files/` directories contain JavaScript and CSS dependencies required for Leaflet-based interactive maps and should be kept alongside their corresponding HTML files.
+
+---
+
+## Data
+
+All datasets required to reproduce analyses are contained in the `Data/` directory.
+
+### Occurrence and spatial data
+
+* **`Data/HaitiShapefiles/HaitiTrapsBin.csv`**
+  Presence locations of *Aedes aegypti* used for model training.
+
+* **`Data/HaitiShapefiles/`**
+  Administrative boundaries and national shapefiles for Haiti, including versions with water bodies removed.
+
+### Environmental covariates
+
+* **`Data/Covars/Haiti_bioclim_covars.grd/.gri`**
+  Raster stack of WorldClim 2.1 bioclimatic variables (~1 km resolution).
+
+### Climate warming scenarios
+
+* **`Data/WarmingLevelsList/cmip6_warming_levels_Hauser2022.csv`**
+  Lookup table assigning CMIP6 model projections to warming levels following Hauser et al. (2022).
+
+### Vulnerability and exposure
+
+* **`Data/JIAF_Data/jiaf_haiti_2025.xlsx`**
+  Joint Intersectoral Analysis Framework (JIAF) humanitarian needs data used to construct deprivation indices.
+
+### Pseudo-absence datasets
+
+* **`Data/PseudoAbsence_Datasets/`**
+  Replicated pseudo-absence datasets (`.rds`) used for ensemble model fitting.
+
+### Ensemble predictions
+
+* **`Data/Ensemble_Rasters/`**
+  Raster outputs summarizing ensemble predictions (mean, median, SD, CV, confidence intervals).
+
+---
+
+## Analysis Code
+
+* **`Supp_File_3.rmd`**
+  R Markdown document containing the complete analytical workflow, including:
+
+  * data preprocessing and covariate extraction
+  * pseudo-absence generation
+  * BRT model fitting and evaluation
+  * baseline and future predictions
+  * population exposure and risk index construction
+  * map and figure generation
+
+Rendering this document reproduces the analyses and outputs presented in the manuscript and on the project website.
+All code was confirmed functional and reproducible at time of publication, however please note that some modifications to directories are required to run the code from beginning to end, and some chunks require both large storage quotas and significant computational requirements.
+
+---
+
+## Figures and Supplementary Outputs
+
+All manuscript figures and supplemental materials are stored in the `Figures/` directory.
+
+This includes:
+
+* main manuscript figures (`Figure_1.tif` – `Figure_4.tif`)
+* supplemental figures
+* supplemental tables and data files
+
+These files are intended for direct reuse and citation.
+
+---
+
+## Interactive Maps
+
+This repository includes several Leaflet-based interactive maps:
+
+* **`Haiti_Aeae_Preds.html`**
+  Baseline ensemble suitability predictions for *Aedes aegypti*.
+
+* **`Haiti_Communes_Map.html`**
+  Commune-level summaries of predicted suitability.
+
+* **`Haiti_Risk_Map.html`**
+  Integrated risk maps combining suitability, population exposure, and vulnerability metrics.
+
+These maps are accessible via GitHub Pages at URLs of the form:
+
+```
+https://ianpsheasmith.github.io/HaitiAeaeENM/<map_name>.html
+```
+
+---
+
+## Usage
+
+### Clone the repository
+
+```bash
+git clone https://github.com/IanPsheaSmith/HaitiAeaeENM.git
+cd HaitiAeaeENM
+```
+
+### Reproduce analyses
+
+1. Open `Supp_File_3.rmd` in RStudio or another compatible IDE.
+2. Install required R packages listed at the top of the document.
+3. Render the file to reproduce analyses and outputs.
+
+---
 
 ## Citation
 
-If you use this code or data in your research, please cite the associated manuscript:
+If you use this repository in your work, please cite the associated manuscript (citation will be updated upon publication):
 
-> Pshea-Smith, I.A., Okech, B., Boncy, J., Existe, A., Punch, B., Matulis, G.A., Koehler, J.W., Dunford, J., Blackburn, J.K., von Fricken, M.E. (2025). Increasing suitability of <i>Aedes aegypti</i> as a global health equity issue under warming temperature regimes in the country of Haiti. [Manuscript in preparation]
+> Pshea-Smith, I.A., Okech, B., Boncy, J., Existe, A., Punch, B., Matulis, G.A., Koehler, J.W., Dunford, J., Blackburn, J.K., von Fricken, M.E. (2025). *Increasing suitability of Aedes aegypti as a global health equity issue under warming temperature regimes in the country of Haiti.* Manuscript in preparation.
 
-## Funding and Disclaimer
-
-This work was funded by the Armed Forces Health Surveillance Branch (AFHSB), Global Emerging Infections Surveillance (GEIS) Section, under ProMIS ID (P0154_24_EC and P0118-24-RD). These funders had no role in study design, data collection and analysis, decision to publish, or preparation of the manuscript. This work was also funded in part through Battelle Memorial Institute's contract with the Information Analysis Center Multiple Award Contract (IAC MAC) No. FA807518D0005-FA807523F0016: Ongoing Force Health Protection (FHP) Analysis, Assessment, and Evaluation for Navy and Marine Corps Force Health Protection Command (NMCFHPC). This material is based upon work supported by the DoD Information Analysis Center Program Management Office (DoD IAC PMO) and the Navy and Marine Corps Force Health Protection Command (NMCFHPC) under Contract No. FA807518D0005-FA807523F0016. Any opinions, findings and conclusions or recommendations expressed in this material are those of the author(s) and do not necessarily reflect the views of the US Navy and Marine Corps Force Health Protection Command (NMCFHPC), the 774 Enterprise Sourcing Squadron (774 ESS), the Air Force Installation Contracting Center (AFICC), the DoD Information Analysis Center Program Management Office (DoD IAC PMO), or of the institutions and companies affiliated with the authors.
-
-The use of either trade or manufacturers' names in this repository does not constitute an official endorsement of any commercial products. This repository may not be cited for purposes of advertisement. The opinions, interpretations, conclusions, recommendations and views in this repository are those of the authors and do not necessarily reflect the official policy or position of the Uniformed Services University of the Health Sciences, Department of the Army, Department of the Navy, Department of Defense, nor the U.S. Government. Multiple authors are military service members of the U.S. Government. This work was prepared as part of their official duties. Title 17, U.S.C., §105 provides that copyright protection under this title is not available for any work of the U.S. Government. Title 17, U.S.C., §101 defines a U.S. Government work as a work prepared by a military Service member or employee of the U.S. Government as part of that person's official duties.
+---
 
 ## Contact
 
-For questions or collaborations, please contact:  
-Ian Pshea-Smith: ianpsheasmith@ufl.edu  
-Michael von Fricken: mvonf@phhp.ufl.edu
+Ian Pshea-Smith — [ianpsheasmith@ufl.edu](mailto:ianpsheasmith@ufl.edu)
+Michael E. von Fricken — [mvonf@phhp.ufl.edu](mailto:mvonf@phhp.ufl.edu)
