@@ -1,0 +1,21 @@
+interpretable_name,unit,Study Area_min,Study Area_mean,Study Area_median,Study Area_max,Study Area_sd,Presence_min,Presence_mean,Presence_median,Presence_max,Presence_sd,Pseudo-absence_min,Pseudo-absence_mean,Pseudo-absence_median,Pseudo-absence_max,Pseudo-absence_sd
+Annual Mean Temperature,°C,10.68,24.18,24.71,27.35,2.35,24.09,26.29,26.42,27.05,0.54,12.24,24.17,24.75,27.35,2.4
+Mean Diurnal Range,°C,8.53,10.84,10.88,12.74,0.8,9.57,11.07,11.13,12.22,0.56,8.69,10.87,10.92,12.49,0.78
+Isothermality,%,66.31,73.48,73.33,79.65,2.33,70.4,73.55,73.73,78.31,1.61,66.67,73.54,73.41,78.93,2.24
+Temperature Seasonality,SD X 100,81.25,119.38,119.55,152.78,11.07,108.41,125.82,125.87,146.48,7.33,86.5,119.39,119.66,148.38,10.81
+Max Temperature of Warmest Month,°C,17.1,31.1,31.7,35,2.56,31.2,33.42,33.6,34.8,0.71,18.9,31.11,31.8,35,2.61
+Min Temperature of Coldest Month,°C,2.8,16.35,16.8,20.2,2.3,16.2,18.38,18.5,19.4,0.59,4,16.33,16.8,19.8,2.37
+Temperature Annual Range,°C,12.1,14.75,14.8,16.6,0.77,13.6,15.04,15.1,16.1,0.5,12.3,14.77,14.9,16.5,0.77
+Mean Temperature of Wettest Quarter,°C,11.9,25.09,25.52,28.52,2.3,24.87,27.27,27.58,28.43,0.81,13.48,25.09,25.53,28.43,2.36
+Mean Temperature of Driest Quarter,°C,9.02,22.72,23.22,28.17,2.46,22.68,24.79,24.78,27.77,0.77,10.5,22.72,23.27,27.97,2.52
+Mean Temperature of Warmest Quarter,°C,12.07,25.49,26,28.8,2.36,25.37,27.68,27.83,28.5,0.58,13.68,25.48,26.03,28.77,2.42
+Mean Temperature of Coldest Quarter,°C,9.02,22.56,23.12,25.82,2.34,22.42,24.62,24.72,25.5,0.54,10.5,22.56,23.15,25.75,2.4
+Annual Precipitation,mm,538,1470.31,1525,2386,315.45,721,1216.09,1178,2031,237.4,593,1459.01,1519.5,2326,317.75
+Precipitation of Wettest Month,mm,91,238.6,230,468,68.45,120,188.51,175,426,49.91,96,237.96,232,457,67.8
+Precipitation of Driest Month,mm,7,37.34,31,93,20.77,8,28.18,21,77,17.74,7,36.41,29,90,20.69
+Precipitation Seasonality,CV,25.3,55.87,57.62,79.35,11.35,30.76,53.79,52.87,76.51,10.38,25.6,56.33,58.21,78.97,11.17
+Precipitation of Wettest Quarter,mm,240,569.82,575,998,123.93,318,461.82,444,802,92.01,261,568.29,576,961,124.59
+Precipitation of Driest Quarter,mm,29,129.46,112,322,65.19,32,106.42,89,283,56.76,29,126.84,109,314,65.13
+Precipitation of Warmest Quarter,mm,122,454.34,480,717,103.55,245,380.58,395,609,79.19,153,451.23,481,681,105.08
+Precipitation of Coldest Quarter,mm,29,140.67,112,478,84.54,32,116,89,421,81.08,29,138.21,109,470,86.09
+,,,,,,,,,,,,,,,,
