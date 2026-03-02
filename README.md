@@ -4,7 +4,7 @@ This repository contains data, code, figures, and interactive visualizations ass
 
 An interactive project website is hosted via GitHub Pages and serves as the primary entry point for exploring results and maps:
 
-➡️ **https://ianpsheasmith.github.io/HaitiAeaeENM/**
+**https://ianpsheasmith.github.io/HaitiAeaeENM/**
 
 ---
 
